@@ -1,0 +1,451 @@
+<!-- creamos el proyecto  -->
+
+	- aplicacion web asp.net (.net framework)
+		le damos un nombre(Crud), seleccionamos mvc y le quitamos la configuracion https, para que no nos vaya exisigir certificado al momento de ejecturarlo 
+
+
+<!-- modelo = es la reprecentacion de los datos, tenemos un modelo por cada tabla que existe en la bd
+	vista = es el html, css, js, parte grafica
+	controlador = es un intermediario entre la vista y la capa de datos
+	capa de datos = se usa para conectarse a la bd y por eso se utiliza entityframework(nos permite escanear la 				bd y nos genera los modelos)
+ 	la vista envia un modelo al controlador, el controlador envia un modelo a datos y este envia el modelo atraves de entityframework
+ -->
+
+<!-- creamos la base de datos  -->
+		- click derecho sobre app_Data, agregar, agregar bd de sql server y colocamos el nombre (CrudDb)  
+		- abrimos la bd en el explorador de servidores y creamos la tabla 
+			- click D sobre tablas, nueva tabla
+				CREATE TABLE [dbo].[vehiculo]
+				(
+					[Id] INT NOT NULL PRIMARY KEY IDENTITY,
+					marca VARCHAR(20) NOT NULL,
+					precio INT NOT NULL,
+					foto VARCHAR(200) NOT NULL
+				)
+			click en acualizar, actualizar bd
+		- agregamos los datos, click d en la tabla y mostrar datos de la tabla
+
+<!-- para conectarme a la bd lo hare con entityframework(este me crea los modelos)  -->
+		- debo crearlo en la carpeta Models, agregar, nuevo elemento, datos, ado.net entity data model (CrudModel) y seleccionamos EF designer desde bd, siguiente, contexto de datos(CrudDbEntities) siguiete, selecciono la tabla (vehiculo) y finalizar
+			- esto crear la clase modelo vehiculo
+
+
+<!-- necesitamos la capa de datos para el crud  -->
+		- creamos la carpeta Crud, dentro creamo la CLASE VehiculoAdmin 
+			- click derecho, agregar, clase (VehiculoAdmin), aqui adentro creamos los metodos(consultar,Guardar,Consultar(id),Modificar y Eliminar)
+
+<!-- ahora vamos a crear el controlador  -->
+			- dentro de controller, agregar, controlador, controlador mvc 5 en blanco, nombre VehiculoController
+			- dentro del controlador creo todos los metodos o ActionResult(Index, Guardar, Nuevo, Detalle, Modificar, Actualizar y Eliminar) y las vistas(Index, Guardar, Detalle, Modificar) de cada uno
+			- agrego la vista del index, click derecho sobre el metodo index, agregar vista, Vista mvc 5, plantilla de tipo list, clase de modelo = vehiculo(Crud.models) = modelo, contexto de datos = CrudDbEntiies(Crud.models)
+
+<!-- Se crea primero el crud(VehiculoAdmin) luego el controlador(VehiculoController) y por ultimo la vista  -->
+	- ***************************** VehiculoAdmin*************************************************
+
+	using Crud.Models;
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Web;
+
+	namespace Crud.Crud
+	{
+	    public class VehiculoAdmin
+	    {
+	        //metodo Consultar que me devuelve todos los datos de la tabla 
+	        //IEnumerable<vehiculo> = coleccion de datos del tipo de dato del modelo
+	        //ctrl + . para agregar el using Crud.Models; 
+	        public IEnumerable<vehiculo> Consultar()
+	        {
+	            //bloque using, instancio el objeto de entityframework
+	            using (CrudDbEntities contexto=new CrudDbEntities())
+	            {
+	                //vehiculo es el nombre de la tabla, AsNoTracking() me deja una copia en memoria 
+	                return contexto.vehiculo.AsNoTracking().ToList();//que me lo devuelva como una lista
+	            }
+	        }
+	        //Metodo Guardar void por que no devuelve nada
+	        public void Guardar(vehiculo modelo)//modelo de vehiculo
+	        {
+	            using (CrudDbEntities contexto = new CrudDbEntities())
+	            {
+	                contexto.vehiculo.Add(modelo);
+	                contexto.SaveChanges();
+	            }
+	        }
+	        //Metodo Consultar un vehiculo en especifico por id
+	        public vehiculo Consultar(int id)
+	        {
+	            using (CrudDbEntities contexto = new CrudDbEntities())
+	            {
+	                //devuelve el objeto                   expresion landa con una variable dinamica
+	                return contexto.vehiculo.FirstOrDefault(v => v.Id == id); // mi Id de la tabla sera = al 
+	                                                                          // de mi parametro
+	            }
+	        }
+
+	        //Metodo modificar
+	        public void Modificar(vehiculo modelo)
+	        {
+	            using(CrudDbEntities contexto = new CrudDbEntities())
+	            {   //                      estados de entityFramework
+	                contexto.Entry(modelo).State = System.Data.Entity.EntityState.Modified;
+	                contexto.SaveChanges();
+	            }
+	        }
+
+	        //metodo eliminar, recibe el modelo que va eliminar
+	        public void Eliminar(vehiculo modelo)
+	        {
+	            using(CrudDbEntities context = new CrudDbEntities())
+	            {
+	                context.Entry(modelo).State = System.Data.Entity.EntityState.Deleted;
+	                context.SaveChanges();
+	            }
+	        }
+	    }
+	}
+
+	- ***************************** VehiculoController *************************************************
+
+	using Crud.Crud;
+	using Crud.Models;
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Web;
+	using System.Web.Mvc;
+
+	namespace Crud.Controllers
+	{
+	    public class VehiculoController : Controller
+	    {
+	        //creo un objeto de vehiculoAdmin para llamar al metodo consultar y demas metodos que necesite
+	        //ctrl + . para agregar el using
+	        VehiculoAdmin admin = new VehiculoAdmin();
+	        // GET: Vehiculo
+	        public ActionResult Index()
+	        {
+	            // ctrl + . para agregar using Crud.Models; vehiculo es el modelo de la carpeta models
+	            IEnumerable<vehiculo> lista = admin.Consultar();
+	            return View(lista);
+	        }
+	        //metodo Guardar, este metodo me redirecciona a mi vista Guardar
+	        public ActionResult Guardar()
+	        {
+	            //evito un error al cargar el metodo
+	            ViewBag.mensaje = "";
+	            return View();
+	        }
+	        //recibe los datos del modelo que vienen en un modelo
+	        public ActionResult Nuevo(vehiculo modelo) // recibe los datos del formulario que 
+	                                                   // vienen en un modelo
+	        {
+	            admin.Guardar(modelo);
+	            //msj de que se completo la accion = objeto de mvc
+	            ViewBag.mensaje = "Vehiculo Guardado";//.mensaje es una variable dinamica
+	            return View("Guardar",modelo);
+	        }
+	        //id = 0 como parametro opcional para evitar errores a través de una consulta por la url
+	        public ActionResult Detalle(int id = 0)
+	        {
+	            vehiculo modelo = admin.Consultar(id);
+	            ViewBag.mensaje = "";
+	            return View(modelo);
+	        }
+	        //modificar un vehiculo
+	        public ActionResult Modificar(int id = 0)
+	        {
+	            //vamos a reutilizar el metodo que permite consultar un solo vehiculo
+	            // creo un modelo que va ser igual id que entra como parametro
+	            vehiculo modelo = admin.Consultar(id);
+	            return View(modelo);
+	        }
+	        //recibe un conjunto de datos = modelo de mi vista modificar
+	        public ActionResult Actualizar(vehiculo modelo)
+	        {
+	            admin.Modificar(modelo);
+	            //msj de que se completo la accion = objeto de mvc
+	            ViewBag.mensaje = "Vehiculo Modificado";
+	            //regresar a la vista con sus datos
+	            return View("Modificar", modelo);
+	        }
+	        //Eliminar vehiculo, recibe un id
+	        public ActionResult Eliminar(int id = 0)
+	        {
+	            //creo un modelo, solo necesito el id para eliminarlo no requiero de todos los datos
+	            vehiculo modelo = new vehiculo()
+	            {
+	                //la propiedad Id va ser igual al id que entra como parametro
+	                Id = id
+	            };
+	            admin.Eliminar(modelo);
+	            //tengo que retornar todos los datos de la tabla por que la vista va esperar un modelo
+	            IEnumerable<vehiculo> lista = admin.Consultar();
+	            ViewBag.mensaje = "Vehiculo Eliminado";
+	            return View("Index",lista);
+	        }
+	    }
+	}
+
+	- ***************************** Vistas, Index *************************************************
+	@model IEnumerable<Crud.Models.vehiculo>
+
+	@{
+	    ViewBag.Title = "Index";
+	}
+
+	<h2>Index</h2>
+
+	<p>
+	    // texto, metodo(actionResult de VehiculoController)
+	    @Html.ActionLink("Crear Nuevo", "Guardar")
+	</p>
+	<div class="form-group">
+	    <div class="col-md-offset-2 col-md-10">
+	        <font color="green">
+	            @ViewBag.mensaje
+	        </font>
+	    </div>
+	</div>
+	<table class="table">
+	    <tr>
+	        <th>
+	            @Html.DisplayNameFor(model => model.marca)
+	        </th>
+	        <th>
+	            @Html.DisplayNameFor(model => model.precio)
+	        </th>
+	        <th class="text-center">
+	            @Html.DisplayNameFor(model => model.foto)
+	        </th>
+	        <th></th>
+	    </tr>
+
+	@foreach (var item in Model) {
+	    <tr>
+	        <td>
+	            @Html.DisplayFor(modelItem => item.marca)
+	        </td>
+	        <td>
+	            @Html.DisplayFor(modelItem => item.precio)
+	        </td>
+	        <td class="text-center">
+	            <img src="@Html.DisplayFor(modelItem => item.foto)" width="200" alt="Alternate Text" />
+	        </td>
+	        <td>
+	            //            texto, metodo(actionR esult)
+	            @Html.ActionLink("Editar", "Modificar", new { id=item.Id }) |
+	            @Html.ActionLink("Ver", "Detalle", new { id=item.Id }) |
+	            @Html.ActionLink("Borrar", "Eliminar", new { id=item.Id })
+	        </td>
+	    </tr>
+	}
+
+	</table>
+
+	- ***************************** Guardar *************************************************
+
+	// ya no es un IEnumerable por que solo retorna un dato(un vehiculo)
+	@model Crud.Models.vehiculo
+
+	@{
+	    ViewBag.Title = "Guardar";
+	}
+
+	<h2>Guardar</h2>
+
+	//                      action, controlador
+	@using (Html.BeginForm("Nuevo", "Vehiculo", new { ReturnUrl = ViewBag.ReturnUrl}, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+	{
+	    @Html.AntiForgeryToken()
+	    
+	    <div class="form-horizontal">
+	        <h4>vehiculo</h4>
+	        <hr />
+	        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.marca, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                @Html.EditorFor(model => model.marca, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.marca, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.precio, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                @Html.EditorFor(model => model.precio, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.precio, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.foto, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                <img src="@Html.DisplayFor(model => model.foto)" width="400"/>
+	                @Html.EditorFor(model => model.foto, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.foto, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            <div class="col-md-offset-2 col-md-10">
+	                <input type="submit" value="Guardar" class="btn btn-default" />
+	            </div>
+	        </div>
+	        
+	        <div class="form-group">
+	            <div class="col-md-offset-2 col-md-10">
+	                <font color="green">
+	                    @ViewBag.mensaje
+	                </font>
+	            </div>
+	        </div>
+	    </div>
+	}
+
+	<div>
+	    @Html.ActionLink("Volver Atrás", "Index")
+	</div>
+
+	@section Scripts {
+	    @Scripts.Render("~/bundles/jqueryval")
+	}
+
+	- ***************************** Detalle *************************************************
+
+	@model Crud.Models.vehiculo
+
+	@{
+	    ViewBag.Title = "Detalle";
+	}
+
+	<h2>Detalle</h2>
+
+	<div>
+	    <h4>vehiculo</h4>
+	    <hr />
+	    <dl class="dl-horizontal">
+	        <dt>
+	            @Html.DisplayNameFor(model => model.marca)
+	        </dt>
+
+	        <dd>
+	            @Html.DisplayFor(model => model.marca)
+	        </dd>
+
+	        <dt>
+	            @Html.DisplayNameFor(model => model.precio)
+	        </dt>
+
+	        <dd>
+	            @Html.DisplayFor(model => model.precio)
+	        </dd>
+
+	        <dt>
+	            @Html.DisplayNameFor(model => model.foto)
+	        </dt>
+
+	        <dd>
+	            <img src="@Html.DisplayFor(model => model.foto)" width="400" />
+	            <br />
+	            @Html.DisplayFor(model => model.foto)
+	        </dd>
+
+	    </dl>
+	</div>
+	<p>
+	    @Html.ActionLink("Editar", "Modificar", new { id = Model.Id }) |
+	    @Html.ActionLink("Volver Atrás", "Index")
+	</p>
+
+	- ***************************** Modificar *************************************************
+
+	@model Crud.Models.vehiculo
+
+	@{
+	    ViewBag.Title = "Modificar";
+	}
+
+	<h2>Modificar</h2>
+
+	//                      metodo, controlador-
+	@using (Html.BeginForm("Actualizar", "Vehiculo", new { ReturnUrl = ViewBag.ReturnUrl }, FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+	{
+	    @Html.AntiForgeryToken()
+
+	    <div class="form-horizontal">
+	        <h4>vehiculo</h4>
+	        <hr />
+	        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+	        @Html.HiddenFor(model => model.Id)
+
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.marca, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                @Html.EditorFor(model => model.marca, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.marca, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.precio, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                @Html.EditorFor(model => model.precio, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.precio, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            @Html.LabelFor(model => model.foto, htmlAttributes: new { @class = "control-label col-md-2" })
+	            <div class="col-md-10">
+	                <img src="@Html.DisplayFor(model => model.foto)" width="400"/>
+	                @Html.EditorFor(model => model.foto, new { htmlAttributes = new { @class = "form-control" } })
+	                @Html.ValidationMessageFor(model => model.foto, "", new { @class = "text-danger" })
+	            </div>
+	        </div>
+
+	        <div class="form-group">
+	            <div class="col-md-offset-2 col-md-10">
+	                <input type="submit" value="Modificar" class="btn btn-default" />
+	            </div>
+	        </div>
+	        <div class="form-group">
+	            <div class="col-md-offset-2 col-md-10">
+	                <font color="green">
+	                    @ViewBag.mensaje
+	                </font>
+	            </div>
+	        </div>
+	    </div>
+	}
+
+	<div>
+	    @Html.ActionLink("Volver Atrás", "Index")
+	</div>
+
+	@section Scripts {
+	    @Scripts.Render("~/bundles/jqueryval")
+	}
+
+
+	- ******************* vehiculo.cs carpeta Models(modelo de la tabla vehiculo) *********************
+
+	namespace Crud.Models
+	{
+	    using System;
+	    using System.Collections.Generic;
+	    using System.ComponentModel.DataAnnotations;
+
+	    public partial class vehiculo
+	    {
+	        public int Id { get; set; }
+	        [Required(ErrorMessage = "Campo Obligatorio.")]
+	        public string marca { get; set; }
+	        [Required(ErrorMessage = "Campo Obligatorio.")]
+	        public int precio { get; set; }
+	        [Required(ErrorMessage = "Campo Obligatorio.")]
+	        public string foto { get; set; }
+	    }
+	}
